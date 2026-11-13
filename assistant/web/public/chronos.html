@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en" data-theme="lavender">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chronos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@420;520;640&family=JetBrains+Mono:wght@440;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+            mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --bg: #0d0b14;
+      --surface: rgba(24, 20, 36, 0.72);
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #f4f1fb;
+      --muted: #b7aec9;
+      --accent: #b497ff;
+      --accent-2: #8fa876;
+      --accent-ink: #1a1328;
+      --orb-a: rgba(180, 151, 255, 0.28);
+      --orb-b: rgba(143, 168, 118, 0.22);
+      --cat-work: #b497ff;
+      --cat-personal: #8fa876;
+      --cat-projects: #d4b483;
+      --cat-health: #7ec8c3;
+      --danger: #ff8f9a;
+      color-scheme: dark;
+    }
+    html[data-theme="cyber"] {
+      --bg: #07090f;
+      --surface: rgba(8, 16, 28, 0.72);
+      --line: rgba(0, 240, 255, 0.18);
+      --text: #e9fbff;
+      --muted: #8eb4c4;
+      --accent: #00f0ff;
+      --accent-2: #ff2a85;
+      --accent-ink: #041016;
+      --orb-a: rgba(0, 240, 255, 0.22);
+      --orb-b: rgba(255, 42, 133, 0.2);
+      --cat-work: #00f0ff;
+      --cat-personal: #ff2a85;
+      --cat-projects: #c6ff4a;
+      --cat-health: #b388ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .orbs span {
+      position: absolute; border-radius: 999px; filter: blur(40px);
+    }
+    .orbs .a { width: 28rem; height: 28rem; background: var(--orb-a); top: -8rem; left: -6rem; }
+    .orbs .b { width: 24rem; height: 24rem; background: var(--orb-b); right: -4rem; bottom: -6rem; }
+    #app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }
+    .glass {
+      background: var(--surface);
+      backdrop-filter: blur(18px);
+      border: 1px solid var(--line);
+    }
+    .topbar {
+      display: flex; align-items: center; gap: 0.65rem;
+      min-height: 4.1rem; padding: 0.55rem 0.85rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { font-weight: 640; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.78rem; }
+    .brand small { display: block; letter-spacing: 0.18em; color: var(--accent-2); font-family: "JetBrains Mono", monospace; font-size: 0.62rem; }
+    .icon-btn, .seg button, .today, .pill, .primary {
+      border: 1px solid var(--line); background: rgba(255,255,255,0.03);
+      border-radius: 999px; padding: 0.38rem 0.75rem; transition: border-color .2s, background .2s, color .2s;
+    }
+    .icon-btn { width: 2rem; height: 2rem; padding: 0; border-radius: 999px; }
+    .icon-btn:hover, .seg button:hover, .today:hover, .pill:hover { border-color: var(--accent); }
+    .heading { font-family: "JetBrains Mono", monospace; font-size: 0.92rem; min-width: 11rem; }
+    .quick { flex: 1; display: flex; align-items: center; gap: 0.4rem; border-radius: 999px; padding: 0.2rem 0.75rem; min-width: 0; }
+    .quick input {
+      flex: 1; background: transparent; border: 0; outline: none; min-width: 0; padding: 0.45rem 0;
+    }
+    .quick kbd {
+      font-family: "JetBrains Mono", monospace; font-size: 0.68rem; color: var(--muted);
+      border: 1px solid var(--line); border-radius: 6px; padding: 0.1rem 0.35rem;
+    }
+    .seg { display: flex; padding: 0.15rem; border-radius: 999px; }
+    .seg button[aria-selected="true"], .primary {
+      background: var(--accent); color: var(--accent-ink); border-color: transparent;
+    }
+    .pill.linked { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 55%, transparent); }
+    .shell { flex: 1; display: flex; min-height: 0; }
+    .side {
+      width: 17.5rem; padding: 0.9rem; display: flex; flex-direction: column; gap: 0.9rem;
+      border-right: 1px solid var(--line); overflow: auto;
+    }
+    #app.side-collapsed .side { display: none; }
+    .primary { width: 100%; border-radius: 12px; padding: 0.7rem 0.8rem; font-weight: 640; }
+    .mini { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.15rem; text-align: center; font-size: 0.75rem; }
+    .mini button, .dow { border: 0; background: transparent; border-radius: 8px; padding: 0.28rem 0; }
+    .dow { color: var(--muted); font-family: "JetBrains Mono", monospace; font-size: 0.65rem; }
+    .mini button.today { color: var(--accent-ink); background: var(--accent); }
+    .mini button.on { outline: 1px solid var(--accent); }
+    .mini button.muted { color: var(--muted); }
+    .filters { display: flex; flex-direction: column; gap: 0.35rem; }
+    .filters label { display: flex; align-items: center; gap: 0.45rem; font-size: 0.88rem; }
+    .swatch { width: 0.7rem; height: 0.7rem; border-radius: 99px; display: inline-block; }
+    .upnext { border-radius: 14px; padding: 0.75rem 0.8rem; }
+    .upnext .when { font-family: "JetBrains Mono", monospace; color: var(--accent); font-size: 0.78rem; }
+    .viewport { flex: 1; min-width: 0; overflow: auto; padding: 0.75rem; }
+    .month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.4rem; min-width: 44rem; }
+    .cell {
+      min-height: 6.6rem; border-radius: 14px; padding: 0.4rem; text-align: left;
+      display: flex; flex-direction: column; gap: 0.2rem; transition: border-color .2s;
+    }
+    .cell { cursor: pointer; }
+    .cell:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+    .cell .num { font-family: "JetBrains Mono", monospace; font-size: 0.75rem; color: var(--muted); }
+    .cell.today .num { color: var(--accent-ink); background: var(--accent); border-radius: 99px; padding: 0.05rem 0.4rem; width: fit-content; }
+    .cell.out { opacity: 0.45; }
+    .pill-event, .block {
+      border: 0; border-radius: 8px; text-align: left; padding: 0.12rem 0.35rem;
+      font-size: 0.72rem; color: #140f1c; background: var(--cat, var(--accent));
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .timegrid { min-width: 52rem; position: relative; }
+    .allday { display: grid; grid-template-columns: 3.4rem repeat(var(--cols), 1fr); gap: 0.25rem; margin-bottom: 0.4rem; position: sticky; top: 0; z-index: 3; }
+    .dayhead { text-align: center; padding: 0.35rem; border-radius: 12px; font-size: 0.78rem; }
+    .dayhead strong { display: block; font-family: "JetBrains Mono", monospace; }
+    .dayhead.today { color: var(--accent-ink); background: var(--accent); }
+    .hours { display: grid; grid-template-columns: 3.4rem 1fr; }
+    .gutter span, .slots { height: 3rem; }
+    .gutter span { display: block; font-family: "JetBrains Mono", monospace; font-size: 0.65rem; color: var(--muted); transform: translateY(-0.4rem); }
+    .cols { display: grid; grid-template-columns: repeat(var(--cols), 1fr); position: relative; }
+    .daycol { position: relative; border-left: 1px solid var(--line); }
+    .slot { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); }
+    .block {
+      position: absolute; z-index: 2; white-space: normal; padding: 0.25rem 0.35rem; overflow: hidden;
+    }
+    .now {
+      position: absolute; left: 0; right: 0; height: 2px; background: var(--accent); z-index: 4; pointer-events: none;
+    }
+    .now::before { content: ""; position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 99px; background: var(--accent); }
+    .modal-back {
+      position: fixed; inset: 0; z-index: 20; background: rgba(5, 4, 10, 0.62);
+      display: grid; place-items: center; padding: 1rem;
+    }
+    .modal-back[hidden] { display: none; }
+    .modal { width: min(32rem, 100%); border-radius: 18px; padding: 1rem 1.05rem 1.1rem; }
+    .modal h2 { margin: 0 0 0.7rem; font-size: 1.05rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
+    .modal label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.78rem; color: var(--muted); margin: 0.45rem 0; }
+    .modal input, .modal select, .modal textarea {
+      background: rgba(0,0,0,0.25); border: 1px solid var(--line); border-radius: 10px;
+      padding: 0.45rem 0.55rem; color: var(--text);
+    }
+    .modal-actions { display: flex; justify-content: space-between; gap: 0.5rem; margin-top: 0.6rem; }
+    .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: transparent; border-radius: 999px; padding: 0.4rem 0.75rem; }
+    .toast { position: fixed; bottom: 1rem; right: 1rem; z-index: 30; padding: 0.6rem 0.8rem; border-radius: 12px; }
+    .toast[hidden] { display: none; }
+    * { scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 65%, transparent); border-radius: 99px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    @media (max-width: 860px) {
+      .quick kbd, .heading { display: none; }
+      .side { width: 14.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="orbs" aria-hidden="true"><span class="a"></span><span class="b"></span></div>
+  <div id="app">
+    <header class="topbar glass">
+      <button class="icon-btn" id="toggle-side" type="button" aria-label="Collapse sidebar">☰</button>
+      <div class="brand">Chronos<small>CALENDAR</small></div>
+      <button class="today" id="today" type="button">Today</button>
+      <button class="icon-btn" id="prev" type="button" aria-label="Previous">‹</button>
+      <button class="icon-btn" id="next" type="button" aria-label="Next">›</button>
+      <div class="heading" id="heading"></div>
+      <form class="quick glass" id="quick-form">
+        <input id="quick" aria-label="Natural language quick add" placeholder="Lunch with Sarah tomorrow at 12:30pm #personal" />
+        <kbd>⌘K</kbd>
+      </form>
+      <div class="seg glass" role="tablist" aria-label="Calendar view">
+        <button type="button" data-view="month" role="tab">Month</button>
+        <button type="button" data-view="week" role="tab">Week</button>
+        <button type="button" data-view="day" role="tab">Day</button>
+      </div>
+      <button class="today" id="theme" type="button">Theme</button>
+      <button class="pill" id="google" type="button">Connect Google</button>
+    </header>
+    <div class="shell">
+      <aside class="side glass" id="sidebar">
+        <button class="primary" id="create" type="button">+ Create Event</button>
+        <div>
+          <div class="heading" id="mini-label" style="margin-bottom:0.4rem"></div>
+          <div class="mini" id="mini"></div>
+        </div>
+        <div class="filters" id="filters"></div>
+        <div class="upnext glass" id="upnext" aria-live="polite"></div>
+      </aside>
+      <main class="viewport" id="viewport" aria-label="Calendar"></main>
+    </div>
+  </div>
+  <div class="modal-back" id="modal" hidden>
+    <form class="modal glass" id="event-form">
+      <h2 id="modal-title">Event</h2>
+      <p id="readonly-note" hidden>This Google Calendar event is read-only here. Edit it in Google, then sync.</p>
+      <label>Title<input id="f-title" required /></label>
+      <label>Date<input id="f-date" type="date" required /></label>
+      <div class="grid-2">
+        <label>Start<input id="f-start" type="time" required /></label>
+        <label>End<input id="f-end" type="time" required /></label>
+      </div>
+      <label>All day<input id="f-allday" type="checkbox" /></label>
+      <label>Category
+        <select id="f-cat">
+          <option value="work">Work</option>
+          <option value="personal">Personal</option>
+          <option value="projects">Projects</option>
+          <option value="health">Health</option>
+        </select>
+      </label>
+      <label>Location / meet link<input id="f-loc" /></label>
+      <label>Description<textarea id="f-desc" rows="3"></textarea></label>
+      <div class="modal-actions">
+        <button class="danger" id="f-delete" type="button">Delete</button>
+        <div>
+          <button class="today" id="f-cancel" type="button">Cancel</button>
+          <button class="primary" id="f-save" type="submit" style="width:auto">Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="toast glass" id="toast" hidden role="status"></div>
+  <script>
+    const CATS = [
+      { id: "work", label: "Work" },
+      { id: "personal", label: "Personal" },
+      { id: "projects", label: "Projects" },
+      { id: "health", label: "Health" },
+    ];
+    const LOCAL_KEY = "chronos.events";
+
+    const state = {
+      cursor: startOfDay(new Date()),
+      view: localStorage.getItem("chronos.view") || "week",
+      filters: JSON.parse(localStorage.getItem("chronos.filters") || '{"work":true,"personal":true,"projects":true,"health":true}'),
+      events: [],
+      google: { linked: false, events_cached: 0 },
+      mode: "local",
+      editing: null,
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+    function startOfWeek(d) { const x = startOfDay(d); x.setDate(x.getDate() - x.getDay()); return x; }
+    function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+    function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function isoDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+    function timeValue(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+    function combine(dateStr, timeStr) {
+      const [y, m, day] = dateStr.split("-").map(Number);
+      const [h, min] = timeStr.split(":").map(Number);
+      return new Date(y, m - 1, day, h || 0, min || 0, 0, 0);
+    }
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+    }
+    function toast(message) {
+      const el = $("toast");
+      el.hidden = false;
+      el.textContent = message;
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => { el.hidden = true; }, 3200);
+    }
+    function headers() {
+      const token = sessionStorage.getItem("assistant.lan.token");
+      const csrf = sessionStorage.getItem("assistant.lan.csrf");
+      const out = { "Content-Type": "application/json" };
+      if (token) out["x-assistant-lan-token"] = token;
+      if (csrf) out["x-assistant-csrf"] = csrf;
+      return out;
+    }
+    function categoryFrom(notes, title) {
+      const blob = (notes || "") + " " + (title || "");
+      const mark = blob.match(/\[\[chronos:(work|personal|projects|health)\]\]/i);
+      if (mark) return mark[1].toLowerCase();
+      const hash = blob.match(/#(work|personal|projects|health)\b/i);
+      if (hash) return hash[1].toLowerCase();
+      return "personal";
+    }
+    function stripMarkers(notes) {
+      return String(notes || "").replace(/\[\[chronos:(work|personal|projects|health)\]\]/ig, "").replace(/\[\[allday\]\]/ig, "").trim();
+    }
+    function toNotes(event) {
+      return ("[[chronos:" + event.category + "]]" + (event.allDay ? " [[allday]]" : "") + "\n" + (event.description || "")).trim();
+    }
+    function fromAppt(row) {
+      const start = new Date(row.starts_at);
+      const end = row.ends_at ? new Date(row.ends_at) : new Date(start.getTime() + 3600000);
+      const notes = row.notes || "";
+      const allDay = /\[\[allday\]\]/i.test(notes) || (start.getHours() === 0 && start.getMinutes() === 0 && (end - start) >= 20 * 3600000);
+      return {
+        id: row.id,
+        title: row.title,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        category: categoryFrom(notes, row.title),
+        location: row.location || "",
+        description: stripMarkers(notes),
+        source: row.source || "local",
+        allDay,
+        readonly: (row.source || "local") === "google",
+      };
+    }
+    function seedLocal() {
+      const saved = localStorage.getItem(LOCAL_KEY);
+      if (saved) return JSON.parse(saved);
+      const week = startOfWeek(new Date());
+      const at = (day, h, m, dur) => {
+        const start = addDays(week, day); start.setHours(h, m, 0, 0);
+        const end = new Date(start.getTime() + dur * 60000);
+        return [start.toISOString(), end.toISOString()];
+      };
+      const samples = [
+        ["Studio sync", 1, 9, 0, 45, "work", "Meet link", "Weekly planning with the lab."],
+        ["Lunch with Sarah", 2, 12, 30, 60, "personal", "Olive & Rye", ""],
+        ["Ship Chronos polish", 3, 15, 0, 90, "projects", "", "Month, week, and day views."],
+        ["Physio", 4, 8, 15, 50, "health", "Clinic", ""],
+        ["Deep work", 1, 13, 0, 120, "work", "", ""],
+      ].map((row, index) => {
+        const span = at(row[1], row[2], row[3], row[4]);
+        return { id: "local-" + index, title: row[0], start: span[0], end: span[1], category: row[5], location: row[6], description: row[7], source: "local", allDay: false, readonly: false };
+      });
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(samples));
+      return samples;
+    }
+
+    const CalendarService = {
+      mode: "local",
+      async getEvents() {
+        try {
+          const response = await fetch("/api/appointments", { headers: headers() });
+          if (!response.ok) throw new Error("appointments unavailable");
+          const body = await response.json();
+          this.mode = "assistant";
+          state.mode = "assistant";
+          return (body.items || []).filter((item) => item.status === "scheduled").map(fromAppt);
+        } catch (error) {
+          this.mode = "local";
+          state.mode = "local";
+          return seedLocal();
+        }
+      },
+      async createEvent(event) {
+        if (this.mode === "assistant") {
+          const response = await fetch("/api/appointments", {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({
+              title: event.title,
+              starts_at: event.start,
+              ends_at: event.end,
+              location: event.location || "",
+              notes: toNotes(event),
+              reminder_offset_minutes: 60,
+            }),
+          });
+          if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || "Could not create");
+          return response.json();
+        }
+        const all = seedLocal();
+        all.push({ ...event, id: "local-" + Date.now(), source: "local", readonly: false });
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(all));
+        return { id: all[all.length - 1].id };
+      },
+      async updateEvent(event) {
+        if (event.readonly) throw new Error("Google events are read-only here.");
+        if (this.mode === "assistant") {
+          const response = await fetch("/api/appointments/" + event.id, {
+            method: "PUT",
+            headers: headers(),
+            body: JSON.stringify({
+              title: event.title,
+              starts_at: event.start,
+              ends_at: event.end,
+              location: event.location || "",
+              notes: toNotes(event),
+              reminder_offset_minutes: 60,
+            }),
+          });
+          if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || "Could not update");
+          return;
+        }
+        const all = seedLocal().map((item) => String(item.id) === String(event.id) ? event : item);
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(all));
+      },
+      async deleteEvent(event) {
+        if (event.readonly) throw new Error("Google events are read-only here.");
+        if (this.mode === "assistant") {
+          const response = await fetch("/api/appointments/" + event.id + "/cancel", {
+            method: "POST",
+            headers: headers(),
+            body: JSON.stringify({ confirmed: true }),
+          });
+          if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || "Could not delete");
+          return;
+        }
+        const all = seedLocal().filter((item) => String(item.id) !== String(event.id));
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(all));
+      },
+      async googleStatus() {
+        try {
+          const response = await fetch("/api/google/status", { headers: headers() });
+          if (!response.ok) return { linked: false, events_cached: 0 };
+          return response.json();
+        } catch {
+          return { linked: false, events_cached: 0 };
+        }
+      },
+      async syncGoogle() {
+        const response = await fetch("/api/google/sync", { method: "POST", headers: headers() });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.detail || "Sync failed");
+        return body;
+      },
+    };
+
+    function parseQuickAdd(text) {
+      let raw = text.trim();
+      let category = "personal";
+      const hash = raw.match(/#(work|personal|projects|health)\b/i);
+      if (hash) {
+        category = hash[1].toLowerCase();
+        raw = raw.replace(hash[0], " ");
+      }
+      const date = new Date();
+      date.setSeconds(0, 0);
+      let hasTime = false;
+      if (/\btomorrow\b/i.test(raw)) { date.setDate(date.getDate() + 1); raw = raw.replace(/tomorrow/ig, " "); }
+      else if (/\btoday\b/i.test(raw)) raw = raw.replace(/today/ig, " ");
+      else if (/\bnext week\b/i.test(raw)) { date.setDate(date.getDate() + 7); raw = raw.replace(/next week/ig, " "); }
+      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const named = raw.toLowerCase().match(/\b(next\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+      if (named) {
+        const target = days.indexOf(named[2]);
+        let delta = (target - date.getDay() + 7) % 7;
+        if (delta === 0 || named[1]) delta = delta === 0 ? 7 : delta;
+        date.setDate(date.getDate() + delta);
+        raw = raw.replace(named[0], " ");
+      }
+      const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+      const md = raw.toLowerCase().match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})\b/);
+      if (md) {
+        date.setMonth(months[md[1].slice(0, 3)], Number(md[2]));
+        raw = raw.replace(md[0], " ");
+      }
+      const tm = raw.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i) || raw.match(/\b(\d{1,2}):(\d{2})\s*(am|pm)?\b/i) || raw.match(/\b(\d{1,2})\s*(am|pm)\b/i);
+      if (tm) {
+        hasTime = true;
+        let hour = Number(tm[1]);
+        const minute = Number(tm[2] || 0);
+        const ap = (tm[3] || "").toLowerCase();
+        if (ap === "pm" && hour < 12) hour += 12;
+        if (ap === "am" && hour === 12) hour = 0;
+        if (!ap && hour < 8) hour += 12;
+        date.setHours(hour, minute, 0, 0);
+        raw = raw.replace(tm[0], " ");
+      } else date.setHours(9, 0, 0, 0);
+      const title = raw.replace(/\s+/g, " ").replace(/^[\s,.-]+|[\s,.-]+$/g, "") || "Untitled";
+      const end = new Date(date.getTime() + (hasTime ? 60 : 8 * 60) * 60000);
+      return { title, start: date.toISOString(), end: end.toISOString(), category, location: "", description: "", allDay: !hasTime, source: "local", readonly: false };
+    }
+
+    function visible(event) { return state.filters[event.category] !== false; }
+    function eventsOn(day) {
+      return state.events.filter((event) => visible(event) && sameDay(new Date(event.start), day));
+    }
+
+    function renderChrome() {
+      const cursor = state.cursor;
+      let label = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      if (state.view === "week") {
+        const start = startOfWeek(cursor);
+        const end = addDays(start, 6);
+        label = start.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " – " + end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      } else if (state.view === "day") {
+        label = cursor.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+      }
+      $("heading").textContent = label;
+      document.querySelectorAll("[data-view]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.view === state.view ? "true" : "false");
+      });
+      const pill = $("google");
+      if (state.mode !== "assistant") {
+        pill.textContent = "Local sample";
+        pill.classList.remove("linked");
+      } else if (state.google.linked) {
+        pill.textContent = "Google · " + state.google.events_cached;
+        pill.classList.add("linked");
+      } else {
+        pill.textContent = "Connect Google";
+        pill.classList.remove("linked");
+      }
+      $("theme").textContent = document.documentElement.dataset.theme === "cyber" ? "Cyber" : "Lavender";
+      $("mini-label").textContent = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      renderMini();
+      renderFilters();
+      renderUpNext();
+      renderViewport();
+    }
+
+    function renderMini() {
+      const first = new Date(state.cursor.getFullYear(), state.cursor.getMonth(), 1);
+      const gridStart = startOfWeek(first);
+      const today = new Date();
+      let html = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => '<span class="dow">' + day + "</span>").join("");
+      for (let i = 0; i < 42; i += 1) {
+        const day = addDays(gridStart, i);
+        const classes = [sameDay(day, today) ? "today" : "", sameDay(day, state.cursor) ? "on" : "", day.getMonth() !== state.cursor.getMonth() ? "muted" : ""].filter(Boolean).join(" ");
+        html += '<button type="button" class="' + classes + '" data-mini="' + isoDate(day) + '">' + day.getDate() + "</button>";
+      }
+      $("mini").innerHTML = html;
+    }
+
+    function renderFilters() {
+      $("filters").innerHTML = CATS.map((cat) => (
+        '<label><input type="checkbox" data-filter="' + cat.id + '"' + (state.filters[cat.id] ? " checked" : "") + ' />' +
+        '<span class="swatch" style="background:var(--cat-' + cat.id + ')"></span>' + cat.label + "</label>"
+      )).join("");
+    }
+
+    function renderUpNext() {
+      const now = new Date();
+      const next = state.events
+        .filter((event) => visible(event) && new Date(event.end) > now)
+        .sort((a, b) => new Date(a.start) - new Date(b.start))[0];
+      if (!next) {
+        $("upnext").innerHTML = "<strong>Up next</strong><p>Nothing else scheduled.</p>";
+        return;
+      }
+      const start = new Date(next.start);
+      const mins = Math.max(0, Math.round((start - now) / 60000));
+      const when = mins < 1 ? "Now" : mins < 60 ? "in " + mins + "m" : "in " + Math.floor(mins / 60) + "h " + (mins % 60) + "m";
+      $("upnext").innerHTML = "<strong>Up next</strong><p>" + esc(next.title) + "</p><p class='when'>" + when + " · " + start.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) + "</p>";
+    }
+
+    function eventButton(event, extra) {
+      const color = "var(--cat-" + event.category + ")";
+      return '<button type="button" class="' + extra + '" data-event="' + esc(event.id) + '" style="--cat:' + color + '">' + esc(event.title) + "</button>";
+    }
+
+    function renderViewport() {
+      if (state.view === "month") renderMonth();
+      else renderTimeGrid(state.view === "day" ? 1 : 7);
+    }
+
+    function renderMonth() {
+      const first = new Date(state.cursor.getFullYear(), state.cursor.getMonth(), 1);
+      const gridStart = startOfWeek(first);
+      const today = new Date();
+      let html = '<div class="month">';
+      for (let i = 0; i < 42; i += 1) {
+        const day = addDays(gridStart, i);
+        const items = eventsOn(day).slice(0, 3);
+        const more = eventsOn(day).length - items.length;
+        html += '<div class="cell glass' + (sameDay(day, today) ? " today" : "") + (day.getMonth() !== state.cursor.getMonth() ? " out" : "") + '" data-day="' + isoDate(day) + '">';
+        html += '<span class="num">' + day.getDate() + "</span>";
+        items.forEach((event) => { html += eventButton(event, "pill-event"); });
+        if (more > 0) html += '<span class="num">+' + more + "</span>";
+        html += "</div>";
+      }
+      $("viewport").innerHTML = html + "</div>";
+    }
+
+    function renderTimeGrid(cols) {
+      const start = cols === 1 ? startOfDay(state.cursor) : startOfWeek(state.cursor);
+      const today = new Date();
+      let heads = '<div class="allday" style="--cols:' + cols + '"><div></div>';
+      for (let i = 0; i < cols; i += 1) {
+        const day = addDays(start, i);
+        const all = eventsOn(day).filter((event) => event.allDay);
+        heads += '<div class="dayhead glass' + (sameDay(day, today) ? " today" : "") + '"><span>' + day.toLocaleDateString(undefined, { weekday: "short" }) + "</span><strong>" + day.getDate() + "</strong>";
+        all.forEach((event) => { heads += eventButton(event, "pill-event"); });
+        heads += "</div>";
+      }
+      heads += "</div>";
+      let gutter = "";
+      for (let hour = 0; hour < 24; hour += 1) gutter += "<span>" + ((hour % 12) || 12) + (hour < 12 ? "a" : "p") + "</span>";
+      let columns = "";
+      for (let i = 0; i < cols; i += 1) {
+        const day = addDays(start, i);
+        const timed = eventsOn(day).filter((event) => !event.allDay);
+        columns += '<div class="daycol" data-date="' + isoDate(day) + '">';
+        for (let hour = 0; hour < 24; hour += 1) {
+          columns += '<button type="button" class="slot" style="top:' + (hour * 3) + 'rem;height:3rem" data-slot="' + isoDate(day) + "T" + pad(hour) + ':00" aria-label="Create at ' + hour + ':00"></button>';
+        }
+        timed.forEach((event) => {
+          const startAt = new Date(event.start);
+          const endAt = new Date(event.end);
+          const top = (startAt.getHours() * 60 + startAt.getMinutes()) / 60 * 3;
+          const height = Math.max(((endAt - startAt) / 3600000) * 3, 1.2);
+          columns += '<button type="button" class="block" data-event="' + esc(event.id) + '" style="top:' + top + "rem;height:" + height + 'rem;left:4px;right:4px;background:var(--cat-' + event.category + ')">' + esc(event.title) + "</button>";
+        });
+        if (sameDay(day, today)) {
+          const now = new Date();
+          const top = (now.getHours() * 60 + now.getMinutes()) / 60 * 3;
+          columns += '<div class="now" style="top:' + top + 'rem"></div>';
+        }
+        columns += "</div>";
+      }
+      $("viewport").innerHTML = heads + '<div class="hours"><div class="gutter">' + gutter + '</div><div class="cols" style="--cols:' + cols + '">' + columns + "</div></div>";
+      const nowEl = $("viewport").querySelector(".now");
+      if (nowEl && !state.scrolledNow) {
+        nowEl.scrollIntoView({ block: "center" });
+        state.scrolledNow = true;
+      }
+    }
+
+    function findEvent(id) { return state.events.find((event) => String(event.id) === String(id)); }
+
+    function openModal(event) {
+      state.editing = event;
+      const start = event ? new Date(event.start) : new Date();
+      const end = event ? new Date(event.end) : new Date(start.getTime() + 3600000);
+      $("modal-title").textContent = event ? (event.readonly ? "Google event" : "Edit event") : "Create event";
+      $("f-title").value = event ? event.title : "";
+      $("f-date").value = isoDate(start);
+      $("f-start").value = timeValue(start);
+      $("f-end").value = timeValue(end);
+      $("f-allday").checked = !!(event && event.allDay);
+      $("f-cat").value = event ? event.category : "personal";
+      $("f-loc").value = event ? event.location : "";
+      $("f-desc").value = event ? event.description : "";
+      const locked = !!(event && event.readonly);
+      ["f-title", "f-date", "f-start", "f-end", "f-allday", "f-cat", "f-loc", "f-desc", "f-save"].forEach((id) => { $(id).disabled = locked; });
+      $("f-delete").hidden = !event || !event.id || locked;
+      $("readonly-note").hidden = !locked;
+      $("modal").hidden = false;
+      if (!locked) $("f-title").focus();
+    }
+
+    function closeModal() { $("modal").hidden = true; state.editing = null; }
+
+    async function reload() {
+      state.events = await CalendarService.getEvents();
+      state.google = await CalendarService.googleStatus();
+      renderChrome();
+    }
+
+    $("today").onclick = () => { state.cursor = startOfDay(new Date()); renderChrome(); };
+    $("prev").onclick = () => shift(-1);
+    $("next").onclick = () => shift(1);
+    function shift(dir) {
+      if (state.view === "month") state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() + dir, 1);
+      else if (state.view === "week") state.cursor = addDays(state.cursor, 7 * dir);
+      else state.cursor = addDays(state.cursor, dir);
+      renderChrome();
+    }
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      button.onclick = () => {
+        state.view = button.dataset.view;
+        localStorage.setItem("chronos.view", state.view);
+        renderChrome();
+      };
+    });
+    $("theme").onclick = () => {
+      const next = document.documentElement.dataset.theme === "cyber" ? "lavender" : "cyber";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem("chronos.theme", next);
+      renderChrome();
+    };
+    $("toggle-side").onclick = () => $("app").classList.toggle("side-collapsed");
+    $("create").onclick = () => openModal(null);
+    $("quick-form").onsubmit = async (event) => {
+      event.preventDefault();
+      const text = $("quick").value.trim();
+      if (!text) return;
+      try {
+        await CalendarService.createEvent(parseQuickAdd(text));
+        $("quick").value = "";
+        await reload();
+        toast("Event added");
+      } catch (error) { toast(error.message); }
+    };
+    $("google").onclick = async () => {
+      if (state.mode !== "assistant") { toast("Assistant API is offline. Showing the local sample calendar."); return; }
+      if (!state.google.linked) {
+        if (window.parent !== window) window.parent.postMessage({ type: "chronos-open-settings" }, window.location.origin);
+        else toast("Link Google Calendar in Assistant Settings.");
+        return;
+      }
+      try {
+        const body = await CalendarService.syncGoogle();
+        await reload();
+        toast("Synced " + (body.imported ?? 0) + " Google events");
+      } catch (error) { toast(error.message); }
+    };
+    $("mini").onclick = (event) => {
+      const button = event.target.closest("[data-mini]");
+      if (!button) return;
+      state.cursor = combine(button.dataset.mini, "00:00");
+      renderChrome();
+    };
+    $("filters").onchange = (event) => {
+      const input = event.target.closest("[data-filter]");
+      if (!input) return;
+      state.filters[input.dataset.filter] = input.checked;
+      localStorage.setItem("chronos.filters", JSON.stringify(state.filters));
+      renderChrome();
+    };
+    $("viewport").onclick = (event) => {
+      const existing = event.target.closest("[data-event]");
+      if (existing) { openModal(findEvent(existing.dataset.event)); return; }
+      const slot = event.target.closest("[data-slot]");
+      if (slot) {
+        const [date, time] = slot.dataset.slot.split("T");
+        const start = combine(date, time);
+        openModal({ title: "", start: start.toISOString(), end: new Date(start.getTime() + 3600000).toISOString(), category: "personal", location: "", description: "", allDay: false });
+        state.editing = null;
+        return;
+      }
+      const day = event.target.closest("[data-day]");
+      if (day) {
+        const start = combine(day.dataset.day, "09:00");
+        openModal({ title: "", start: start.toISOString(), end: new Date(start.getTime() + 3600000).toISOString(), category: "personal", location: "", description: "", allDay: false });
+        state.editing = null;
+      }
+    };
+    $("f-cancel").onclick = closeModal;
+    $("modal").addEventListener("click", (event) => { if (event.target === $("modal")) closeModal(); });
+    $("f-delete").onclick = async () => {
+      if (!state.editing || !state.editing.id) return;
+      try {
+        await CalendarService.deleteEvent(state.editing);
+        closeModal();
+        await reload();
+      } catch (error) { toast(error.message); }
+    };
+    $("event-form").onsubmit = async (event) => {
+      event.preventDefault();
+      const allDay = $("f-allday").checked;
+      const start = allDay ? combine($("f-date").value, "00:00") : combine($("f-date").value, $("f-start").value);
+      const end = allDay ? addDays(combine($("f-date").value, "00:00"), 1) : combine($("f-date").value, $("f-end").value);
+      if (end <= start) { toast("End time must be after the start."); return; }
+      const draft = {
+        ...(state.editing || {}),
+        title: $("f-title").value.trim(),
+        start: start.toISOString(),
+        end: end.toISOString(),
+        allDay,
+        category: $("f-cat").value,
+        location: $("f-loc").value.trim(),
+        description: $("f-desc").value.trim(),
+      };
+      try {
+        if (state.editing && state.editing.id) await CalendarService.updateEvent(draft);
+        else await CalendarService.createEvent(draft);
+        closeModal();
+        await reload();
+      } catch (error) { toast(error.message); }
+    };
+    document.addEventListener("keydown", (event) => {
+      const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName);
+      if (event.key === "Escape") { closeModal(); return; }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        $("quick").focus();
+        return;
+      }
+      if (typing) return;
+      if (event.key.toLowerCase() === "t") $("today").click();
+      if (event.key.toLowerCase() === "m") document.querySelector('[data-view="month"]').click();
+      if (event.key.toLowerCase() === "w") document.querySelector('[data-view="week"]').click();
+      if (event.key.toLowerCase() === "d") document.querySelector('[data-view="day"]').click();
+    });
+
+    const savedTheme = localStorage.getItem("chronos.theme");
+    if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+    reload();
+    setInterval(() => { renderUpNext(); if (state.view !== "month") renderViewport(); }, 60000);
+  </script>
+</body>
+</html>

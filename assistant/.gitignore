@@ -1,0 +1,4 @@
+secrets/
+config/ngrok.mobile.yml
+*.env
+!config/*.env.example

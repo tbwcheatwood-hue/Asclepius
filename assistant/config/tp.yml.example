@@ -1,0 +1,11 @@
+# Copy to config/tp.yml and set the Google account allowed to open the tunnel.
+# Do not commit the filled-in file.
+on_http_request:
+  - actions:
+      - type: oauth
+        config:
+          provider: google
+  - expressions:
+      - "actions.ngrok.oauth.identity.email != 'you@example.com'"
+    actions:
+      - type: deny
